@@ -1,5 +1,4 @@
 import socket
-import urlparse
 
 def send_local_request(host, port):
 	#Initalize socket
