@@ -1,5 +1,7 @@
 Distributed Systems Lab II - Multithreaded Server w/ Thread Pooling
 
+Usage -> ./start.sh [port number]
+
 14/10
 
 There are several issues with this version:
