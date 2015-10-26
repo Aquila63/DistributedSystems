@@ -1,4 +1,4 @@
-import sys, SocketServer, threading
+import sys, SocketServer, threading, os
 import Queue
 
 class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
@@ -45,7 +45,7 @@ class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 			request.sendall("KELL_SERVICE recieved, shutting down")
 			print "Killing server..."
 			killer_thread = threading.Thread(target = self.shutdown)
-			killer_thread.run()
+			killer_thread.start()
 
 		curr_thread = threading.current_thread()
 		#Can't print the client's actual IP for some reason
@@ -57,8 +57,9 @@ class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 	#Who would've thought killing the server would be harder than creating it
 	#The only way I can kill it is forcing a core dump using Ctrl + \
 	def shutdown(self):
-		self.request_queue.join()
-		server.shutdown()
+		#Force shutdown, this is the only method which works
+		os._exit(os.EX_OK)
+
 
 class ThreadedRequestHandler(SocketServer.BaseRequestHandler):
 	pass
