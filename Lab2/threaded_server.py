@@ -46,12 +46,12 @@ class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 			print "Killing server..."
 			killer_thread = threading.Thread(target = self.shutdown)
 			killer_thread.start()
-		if "HELO" not in data:
-			data = "Message not formateed correctly"
-
-		curr_thread = threading.current_thread()
-		response = "{0}IP:{1}\nPort:{2}\nStudentID:{3}\n".format(data, request.getsockname()[0], PORT, self.student_id)
-		request.sendall(response)
+		if "HELO" in data:
+			curr_thread = threading.current_thread()
+			response = "{0}IP:{1}\nPort:{2}\nStudentID:{3}\n".format(data, request.getsockname()[0], PORT, self.student_id)
+			request.sendall(response)
+		else:
+			pass
 
 	def shutdown(self):
 		server.server_close()
