@@ -10,15 +10,28 @@ class Chatroom():
 		self.name = name
 		self.room_id = uuid.uuid4().int>>64
 
-	def join_room(self, client, name):
+	def join_room(self, client, handle):
 		self.client_list.append(client)
+		self.send_message("{0} has joined the chatroom\n".format(handle)) 
 		return uuid.uuid4().int>>64 #Return a unique join id
+
+	def leave_room(self, client, handle):
+		self.client_list.remove(client)
+		self.send_message("{0} has left the chatroom\n".format(handle))
 	
+	def chat_message(self, handle, message):
+		chat_message = "CHAT: {0}\nCLIENT_NAME: {1}\nMESSAGE: {2}".format(self.room_id, handle, message)
+		self.send_message(chat_message)
+		
+	def send_message(self, message):
+		for client in self.client_list:
+			client.sendall(message)	
 
 class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 
 	pool_size = 10 #No. of threads in the pool
 	student_id = "07988616e4e32911bc9f6a7571184b611fc93406d027a5c828a87664735ed383"
+	clients = []
 	chatrooms = {}
 
 	def setup_rooms(self):
@@ -60,22 +73,56 @@ class ThreadPoolMixIn(SocketServer.ThreadingMixIn):
 
 	#This is where the work is done
 	def finish_request(self, request, client_address):
-		#Recieve data from client
-		data = request.recv(1024)
-		print data
-		if data.startswith("JOIN_CHATROOM"):
-			r = re.compile("JOIN_CHATROOM: (.*?)$", re.MULTILINE)
-			res = r.search(data)
-			out = res.group(1)
-			r2 = re.compile("CLIENT_NAME: (.*?)$", re.MULTILINE)
-			res2 = r.search(data)
-			out2 = res2.group(1)
-			room = self.chatrooms[out]
-			room_id = room.room_id
-			join_id = room.join_room(request, out2)
-			response = "JOINED_CHATROOM: {0}\nSERVER_IP: {1}\nPORT: {2}\nROOM_REF: {3}\nJOIN_ID: {4}".format(out, HOST, PORT, room_id, join_id)
-			request.sendto(response, client_address) 
-		
+		while 1:
+			#Recieve data from client
+			data = request.recv(1024)
+			if data:
+				print data
+				
+			if data.startswith("JOIN_CHATROOM"):
+
+				r = re.compile("JOIN_CHATROOM: (.*?)$", re.MULTILINE)
+				res = r.search(data)
+				room_name  = res.group(1)
+				r2 = re.compile("CLIENT_NAME: (.*?)$", re.MULTILINE)
+				res2 = r2.search(data)
+				handle  = res2.group(1)
+
+				room = self.chatrooms[room_name]
+				room_id = room.room_id
+				join_id = room.join_room(request, handle)
+				response = "JOINED_CHATROOM: {0}\nSERVER_IP: {1}\nPORT: {2}\nROOM_REF: {3}\nJOIN_ID: {4}".format(room_name, HOST, PORT, room_id, join_id)
+				request.sendto(response, client_address) 
+
+			elif data.startswith("LEAVE_CHATROOM"):
+
+				r = re.compile("LEAVE_CHATROOM: (.*?)$", re.MULTILINE)
+				res = r.search(data)
+				room_name = res.group(1)
+				r2 = re.compile("JOIN_ID: (.*?)$", re.MULTILINE)
+				res2 = r2.search(data)
+				join_id = res2.group(1)
+
+				room = self.chatrooms[room_name]
+				room_id  = room.room_id
+				room.leave_room(request, handle)
+				response = "LEFT_CHATROOM: {0}\nJOIN_ID: {1}".format(room_name, join_id)
+				request.sendto(response, client_address)
+			
+			elif data.startswith("CHAT"):
+				r = re.compile("CHAT: (.*?)$", re.MULTILINE)
+				res = r.search(data)
+				room_name = res.group(1)
+				r2 = re.compile("MESSAGE: (.*?)$", re.MULTILINE)
+				res2 = r2.search(data)
+				message = res2.group(1)
+				r3 = re.compile("CLIENT_NAME: (.*?)$", re.MULTILINE)
+				res3 = r3.search(data)
+				handle  = res3.group(1)
+				
+				room = self.chatrooms[room_name]
+				room.chat_message(handle, message)
+
 
 	def shutdown(self):
 		server.server_close()
